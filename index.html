@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="dist/reset.css" />
+    <link rel="stylesheet" href="dist/reveal.css" />
+    <link rel="stylesheet" href="dist/theme/black.css" />
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="plugin/highlight/monokai.css" />
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h3>Отношения в моделях</h3>
+        </section>
+        <section>
+          <h5>Один ко одному</h5>
+          <img src="img/One-to-One.png" alt="" />
+        </section>
+        <section>
+          <h5>Один ко многим</h5>
+          <img src="img/One-to-Many.png" alt="" />
+        </section>
+        <section>
+          <h5>Многие ко многим</h5>
+          <img src="img/Many-to-Many.png" alt="" />
+        </section>
+        <section>
+          <h5>К одному через</h5>
+          <img src="img/Has-One-Through.png" alt="" />
+        </section>
+        <section>
+          <h5>Ко Многим Через</h5>
+          <img src="img/Has-Many-Through.png" alt="" />
+        </section>
+        <section>
+          <h5>Ко многим через в бд</h5>
+          <img src="img/Has-Many-Through-database.png" alt="" />
+        </section>
+        <section>
+          <h5>Полиморфные отношения Один к Одному</h5>
+          <img src="img/One-to-One-Polymorphic.png" alt="" />
+        </section>
+        <section>
+          <h5>Полиморфные Один ко Многим</h5>
+          <img src="img/One-to-Many-Polymorphic.png" alt="" />
+        </section>
+        <section>
+          <h5>Полиморфные Многие ко Многим</h5>
+          <img src="img/Many-to-Many-Polymorphic.png" alt="" />
+        </section>
+        <section>
+          <h5>Создаём отношение Один к Одному</h5>
+          <p>Связь пользователя к Телефону который будет в отдельной таблице</p>
+        </section>
+        <section>
+          <h5>Миграция добавление ключа в таблице</h5>
+          <pre><code><script type="text/template">public function up(): void
+{
+        Schema::table('phone', function (Blueprint $table) {
+            $table->foreignId('user_id')
+              ->constrained()
+              ->onUpdate('cascade')
+              ->onDelete('cascade');
+        });
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Пример Один к одному</h5>
+          <pre><code><script type="text/template">class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+
+    public function phone()
+    {
+        return $this->hasOne(Phone::class);
+    }
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Один к одному сохранение отношения</h5>
+          <pre><code><script type="text/template">public function store(Request $request)
+    {
+        $user = User::create([
+            'email' => $request->input('email'),
+            'name' => $request->input('name')
+        ]);
+
+        $user->phone()->create([
+            'value' => $request->input('phone')
+        ]);
+
+        return redirect('users');
+    }</script></code></pre>
+        </section>
+        <section>
+          <h5>Один к одному обновление отношения</h5>
+          <pre><code><script type="text/template">public function update(Request $request, User $user)
+    {
+        $user->update([
+            'email' => $request->input('email'),
+            'name' => $request->input('name')
+        ]);
+
+        $user->phone()->update([
+            'value' => $request->input('phone')
+        ]);
+
+        return redirect('users');
+    }</script></code></pre>
+        </section>
+        <section>
+          <h5>Отношение многие ко многим</h5>
+          <p>
+            Рассмотрим это отношение что у одного пользователя есть много постов
+          </p>
+        </section>
+        <section>
+          <h5>Класс миграции</h5>
+          <pre><code><script type="text/template">Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('description');
+            $table->foreignId('user_id')
+                ->constrained()
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+            $table->timestamps();
+});</script></code></pre>
+        </section>
+        <section>
+          <h5>Класс User</h5>
+          <pre><code><script type="text/template"><?php
+
+namespace App\Models;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
+</script></code></pre>
+        </section>
+        <section>
+          <h5>Класс поста</h5>
+          <pre><code><script type="text/template">class Post extends Model
+{
+    use HasFactory;
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Метод для вывода создания</h5>
+          <pre><code><script type="text/template">public function create()
+{
+    return view('post.create', [
+        'users' => User::all(),
+    ]);
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Метод для создания поста в бд</h5>
+          <pre><code><script type="text/template">public function store(Request $request)
+{
+    Post::create([
+        'title' => $request->input('title'),
+        'description' => $request->input('description'),
+        'user_id' => $request->input('user')
+    ]);
+        
+    return redirect('posts');
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Метод для обнолвения в бд</h5>
+          <pre><code><script type="text/template">public function update(Request $request, Post $post)
+{
+    $post->update([
+        'title' => $request->input('title'),
+        'description' => $request->input('description'),
+        'user_id' => $request->input('user')
+    ]);
+
+    return redirect('posts');
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Полезные функции в отношениях</h5>
+          <pre><code><script type="text/template">
+            $users = User::has('post')->get(); // Пользователи у которых есть посты
+            $users = User::doesntHave('post')->get(); // Пользователи у которых нет постов
+            $users = User::has('post', '>=', 2)->get(); // Пользователи у которых больше 2-ух постов или ровно 2 поста
+          </script></code></pre>
+        </section>
+        <section>
+          <h5>Has One of Many</h5>
+          <pre><code><script type="text/template"><?php
+
+class User extends Authenticatable
+{
+    public function latestPost()
+    {
+        return $this->hasOne(Post::class)->latestOfMany(); // Получить последний пост
+    }
+
+    public function oldestPost()
+    {
+        return $this->hasOne(Post::class)->oldestOfMany(); // Получить самый первый созданный пост
+    }
+
+    public function largestPost()
+    {
+        return $this->hasOne(Post::class)->ofMany('like', 'max'); // Получить самый залайканый пост
+    }
+}
+</script></code></pre>
+        </section>
+
+        <section>
+          <h5>Чуть улучшенный вариант</h5>
+          <pre><code><script type="text/template">public function latestPost()
+    {
+        return $this->posts()->one()->latestOfMany(); // Получить последний пост
+    }
+
+    public function oldestPost()
+    {
+        return $this->posts()->one()->oldestOfMany(); // Получить самый первый созданный пост
+    }
+
+    public function largestPost()
+    {
+        return $this->posts()->one()->ofMany('like', 'max'); // Получить самый залайканый пост
+    }</script></code></pre>
+        </section>
+        <section>
+          <h3>Проблема N+1</h3>
+        </section>
+        <section>
+          <h5>Проблема N+1</h5>
+          <p>
+            Проблема N+1 - это когда код Laravel выполняет слишком много
+            запросов к базе данных. Это происходит потому, что Eloquent
+            позволяет разработчикам писать читаемый синтаксис с моделями, не
+            вникая глубже в то, что «волшебство» происходит под капотом.
+          </p>
+          <p>
+            Это проблема не только Eloquent или даже Laravel: она хорошо
+            известна в индустрии разработки. Почему он называется «N+1»? Потому
+            что в случае с Eloquent он запрашивает ОДНУ строку из базы данных, а
+            затем выполняет еще один запрос для КАЖДОЙ связанной записи. Итак, N
+            запросов плюс сама запись составляют N+1.
+          </p>
+        </section>
+        <section>
+          <h5>Пример Обычного запроса N+1</h5>
+          <pre><code><script type="text/template">class Book extends Model
+{
+    public function author()
+    {
+        return $this->belongsTo(Author::class);
+    }
+}
+ 
+// Код в нашем контроллере:
+$books = Book::all();
+ 
+foreach ($books as $book) {
+    echo $book->author->name;
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Запросы в бд</h5>
+          <img src="img/example1.webp" alt="" />
+        </section>
+        <section>
+          <h5>Исправляем данный запрос</h5>
+          <pre><code><script type="text/template">// Было:
+$books = Book::all();
+ 
+// Стало:
+$books = Book::with('author')->get();</script></code></pre>
+        </section>
+        <section>
+          <h5>Проверяем количество запросов</h5>
+          <img src="img/example1-2.webp" alt="" />
+        </section>
+        <section>
+          <h5>Выводим авторов и количество их книг</h5>
+          <pre><code><script type="text/template">public function index()
+{
+    $authors = Author::with('books')->get();
+ 
+    return view('authors.index', compact('authors'));
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Код в шаблоне</h5>
+          <pre><code><script type="text/template">@foreach($authors as $author)
+    <tr>
+        <td>{{ $author->name }}</td>
+        <td>{{ $author->books()->count() }}</td>
+    </tr>
+@endforeach</script></code></pre>
+        </section>
+        <section>
+          <h5>Посмотрим на результат в debugBar</h5>
+          <img src="img/example2.webp" alt="" height="500" />
+        </section>
+        <section>
+          <h5>Небольшое пояснение</h5>
+          <ul>
+            <li>$author->books() означает МЕТОД отношения</li>
+            <li>
+              $author->books означает, что ДАННЫЕ готовы загружены в память
+            </li>
+          </ul>
+          <p>
+            Таким образом, метод связи будет запрашивать базу данных для каждого
+            автора. Но если вы загрузите данные без ()символов, они будут
+            успешно использовать загруженные данные:
+          </p>
+        </section>
+        <section>
+          <h5>Ещё более элегантное решение через один запрос</h5>
+          <pre><code><script type="text/template">// Код в контрллере:
+$authors = Author::withCount('books')->get();
+ 
+// Blade:
+{{ $author->books_count }}</script></code></pre>
+        </section>
+        <section>
+          <h5>Результат</h5>
+          <img src="img/example2-3.webp" alt="" />
+        </section>
+        <section>
+          <h5>Для реализации отношений многим ко многим</h5>
+          <p>Сделаем отношение Категории и Поста многим ко многим</p>
+        </section>
+        <section>
+          <h5>Миграция смежной таблицы</h5>
+          <pre><code><script type="text/template">Schema::create('post_category', function (Blueprint $table) {
+    $table->foreignId('post_id')->constrained();
+    $table->foreignId('category_id')->constrained();
+});</script></code></pre>
+        </section>
+        <section>
+          <h5>Класс Post</h5>
+          <pre><code><script type="text/template">class Post extends Model
+{
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class);
+    }
+}
+</script></code></pre>
+        </section>
+        <section>
+          <h5>Класс Category</h5>
+          <pre><code><script type="text/template">class Category extends Model
+{
+    use HasFactory;
+
+    public function posts()
+    {
+        return $this->belongsToMany(Post::class);
+    }
+}</script></code></pre>
+        </section>
+        <section>
+          <h5>Сохранение поста</h5>
+          <pre><code><script type="text/template">$post = Post::create([
+    'title' => $request->input('title'),
+    'description' => $request->input('description'),
+    'user_id' => $request->input('user')
+]);
+        
+$post->categories()->attach($request->input('categories'));
+
+return redirect('posts');</script></code></pre>
+        </section>
+        <section>
+          <h5>Обновление поста</h5>
+          <pre><code><script type="text/template">public function update(Request $request, Post $post)
+{
+    $post->update([
+        'title' => $request->input('title'),
+        'description' => $request->input('description'),
+        'user_id' => $request->input('user')
+    ]);
+
+    $post->categories()->sync($request->input('categories'));
+
+    return redirect('posts');
+}</script></code></pre>
+        </section>
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // More info about initialization & config:
+      // - https://revealjs.com/initialization/
+      // - https://revealjs.com/config/
+      Reveal.initialize({
+        hash: true,
+        // Learn about plugins: https://revealjs.com/plugins/
+        plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+      });
+
+      // $("pre code").each(function(){
+      //     var html = $(this).html();
+      //     var pattern = html.match(/\s*\n[\t\s]*/);
+      //     $(this).html(html.replace(new RegExp(pattern, "g"),'\n'));
+      // });
+    </script>
+  </body>
+</html>
